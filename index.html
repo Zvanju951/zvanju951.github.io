@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Universal Item Comparator</title>
+  <style>
+    :root {
+      --bg-color: #121212;
+      --container-bg: #1f1f1f;
+      --text-color: #fff;
+      --input-bg: #2c2c2c;
+      --button-bg: #4f9dff;
+      --button-text: #fff;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: var(--container-bg);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h3 {
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      background-color: var(--button-bg);
+      color: var(--button-text);
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .result {
+      margin-top: 2rem;
+      font-weight: bold;
+    }
+
+    .cheaper {
+      color: #90ee90;
+    }
+
+    .expensive {
+      color: #ff7a7a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Item Conversion Comparator</h2>
+
+    <div id="sections"></div>
+
+    <button onclick="compareAll()">Compare All</button>
+    <button onclick="resetCalculator()">🔄 Reset</button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    const sections = {
+      'Leapstones': [
+        'Great Honor Leapstone',
+        'Marvelous Honor Leapstone',
+        'Radiant Honor Leapstone',
+        'Destiny Leapstone'
+      ],
+      'Stones': {
+        'Weapon Stones': [
+          'Crystallized Destruction Stone',
+          'Obliteration Stone',
+          'Refined Obliteration Stone',
+          'Destiny Destruction Stone'
+        ],
+        'Armor Stones': [
+          'Crystallized Guardian Stone',
+          'Protection Stone',
+          'Refined Protection Stone',
+          'Destiny Guardian Stone'
+        ]
+      },
+      'Orehas': [
+        'Oreha Fusion Material',
+        'Superior Oreha Fusion Material',
+        'Prime Oreha Fusion Material',
+        'Destiny Destruction Stone'
+      ]
+    };
+
+    function generateInputs() {
+      const container = document.getElementById('sections');
+      container.innerHTML = '';
+      let idx = 0;
+
+      for (const key in sections) {
+        const section = sections[key];
+        const div = document.createElement('div');
+        div.className = 'section';
+        div.innerHTML += `<h3>${key}</h3>`;
+
+        if (Array.isArray(section)) {
+          section.forEach((item, i) => {
+            div.innerHTML += `<label>${item}</label><input id="price-${idx}" type="number" placeholder="Enter price in gold" value="${localStorage.getItem('price-' + idx) || ''}">`;
+            idx++;
+          });
+        } else {
+          for (const sub in section) {
+            div.innerHTML += `<h4>${sub}</h4>`;
+            section[sub].forEach((item, i) => {
+              div.innerHTML += `<label>${item}</label><input id="price-${idx}" type="number" placeholder="Enter price in gold" value="${localStorage.getItem('price-' + idx) || ''}">`;
+              idx++;
+            });
+          }
+        }
+        container.appendChild(div);
+      }
+    }
+
+    function compareAll() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '';
+
+      let idx = 0;
+      for (const key in sections) {
+        const section = sections[key];
+        const groups = Array.isArray(section) ? [section] : Object.values(section);
+
+        resultDiv.innerHTML += `<h3>${key}</h3>`;
+
+        groups.forEach(group => {
+          const prices = group.map((_, i) => {
+            const val = parseFloat(document.getElementById(`price-${idx + i}`).value);
+            localStorage.setItem(`price-${idx + i}`, val);
+            return val;
+          });
+
+          const names = group;
+
+          for (let i = 0; i < prices.length; i++) {
+            if (isNaN(prices[i])) continue;
+            let converted = prices[i];
+            for (let j = i + 1; j < prices.length; j++) {
+              converted *= 5;
+              if (isNaN(prices[j])) continue;
+              const from = names[i];
+              const to = names[j];
+
+              if (converted < prices[j]) {
+                resultDiv.innerHTML += `<div class="cheaper">✔️ ${from} ➜ ${to}: convert (${Math.round(converted)} gold) is cheaper than buying direct (${Math.round(prices[j])} gold)</div>`;
+              } else if (converted > prices[j]) {
+                resultDiv.innerHTML += `<div class="expensive">❌ ${from} ➜ ${to}: buying direct (${Math.round(prices[j])} gold) is cheaper than converting (${Math.round(converted)} gold)</div>`;
+              }
+            }
+          }
+          idx += group.length;
+        });
+      }
+    }
+
+    function resetCalculator() {
+      let i = 0;
+      for (const key in sections) {
+        const section = sections[key];
+        const groups = Array.isArray(section) ? [section] : Object.values(section);
+        groups.forEach(group => {
+          group.forEach(() => {
+            localStorage.removeItem(`price-${i}`);
+            i++;
+          });
+        });
+      }
+      generateInputs();
+      document.getElementById('result').innerHTML = '';
+    }
+
+    window.onload = generateInputs;
+  </script>
+</body>
+</html>
